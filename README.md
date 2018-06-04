@@ -3,7 +3,9 @@
 Python tool for manipulating with STM32 MCUs using **ST-Link** in-system programmer and debugger.
 
 This is a modified version that supports python 2.7.
-NOTE:
+
+**NOTE by Kons**:
+
 The lib folder should be renamed stlib!!!
 This is not done in the git repo to mantain traceability.
 
@@ -52,7 +54,7 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 
 - [Download](https://github.com/pavelrevak/pystlink/archive/master.zip) and unpack or `git clone https://github.com/pavelrevak/pystlink.git`
 - Connect ST-LINK/V2, with [**latest firmware**](http://www.st.com/web/en/catalog/tools/PF258194)
-- Run `./pystlink.py --help` (or `python3 pystlink.py ...` - depend on python installation)
+- Run `./pystlink.py --help` (or `python pystlink.py ...` - depend on python installation)
 
 ## Help
 ```
