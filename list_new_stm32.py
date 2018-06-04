@@ -1,6 +1,6 @@
-import urllib.request
+import urllib
 import json
-import lib.stm32devices
+import stlib.stm32devices
 
 
 def fix_cpu_type(cpu_type):
@@ -25,7 +25,7 @@ URLS = [
 ]
 
 def download_data(url):
-    req = urllib.request.urlopen(url)
+    req = urllib.urlopen(url)
     res = req.read()
     print("downloaded: %d KBytes" % (len(res) / 1024))
     return json.loads(res.decode('utf-8'))
@@ -40,7 +40,7 @@ REQUESTED_COLUMNS = {
     'Operating Frequency': 'freq',
     'FLASH Size': 'flash_size',
     'Data E2PROM': 'eeprom_size',
-    'RAM Size': 'sram_size',
+    'Internal RAM Size': 'sram_size',
 }
 
 raw_jsons = [download_data(url) for url in URLS]

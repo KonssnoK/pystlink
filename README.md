@@ -2,6 +2,11 @@
 
 Python tool for manipulating with STM32 MCUs using **ST-Link** in-system programmer and debugger.
 
+This is a modified version that supports python 2.7.
+NOTE:
+The lib folder should be renamed stlib!!!
+This is not done in the git repo to mantain traceability.
+
 ## Goal
 
 Goal of this project is to bring more flexible support for different MCUs, very simple command line interface, easier integration into Makefile for direct flashing or uploading program into SRAM and many more, simplest way to add support for new MCUs. Also any suggestions are welcome.
@@ -37,10 +42,11 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 
 ### Requirements
 
-- **Python v3.x** (tested with python-3.4 and 3.5)
+- **Python v2.7** (tested with python-2.7)
 - [**pyusb**](https://github.com/walac/pyusb)
 - [**libusb**](https://github.com/libusb/libusb) or any other libusb driver
-  - for Windows download [latest windows binaries](https://github.com/libusb/libusb) and copy libusb-1.0.dll into Windows/System32 directory
+  - for Windows download [latest windows binaries](https://sourceforge.net/projects/libusbk/files/libusbK-release/3.0.7.0/libusbK-3.0.7.0-bin-chk.7z/download)
+  - Create installer for your STLINK device and install using the generated INF file
 
 ### pystlink
 
