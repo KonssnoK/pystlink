@@ -2,12 +2,28 @@
 
 Python tool for manipulating with STM32 MCUs using **ST-Link** in-system programmer and debugger.
 
-This is a modified version that supports python 2.7.
+This is a modified version by Kons.
+Additional features:
 
-**NOTE by Kons**:
+- Support for python 2.7. (Python3 not tested, but i guess not supported)
+- Support for Pystlink integration as a package. Must be used with "with" statement (Fixed not releasing resources).
+- Support for multiple STLink use by new arg '-a', identifying the Address of the STLink device
+- Support for dump data retrieval, so that it can be used by the calling application
+
+**NOTES**:
 
 The lib folder should be renamed stlib!!!
+
 This is not done in the git repo to mantain traceability.
+
+Example using as lib:
+```
+with pystlink.PyStlink() as stlink:
+    d = stlink.start("dump:0x20007F80:4 -q -a2")
+    print(d)
+```
+
+**EOF**
 
 ## Goal
 

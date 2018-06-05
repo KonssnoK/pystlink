@@ -22,6 +22,8 @@ VERSION_STR = "pystlink v0.0.0 (ST-LinkV2)"
 DESCRIPTION_STR = VERSION_STR + """
 (c)2015 by pavel.revak@gmail.com
 https://github.com/pavelrevak/pystlink
+Adapted python 2.7 with packaging by kons.snok@gmail.com
+https://github.com/KonssnoK/pystlink
 """
 
 ACTIONS_HELP_STR = """
@@ -189,8 +191,8 @@ class PyStlink():
         else:
             self._driver = stlib.stm32.Stm32(self._stlink, dbg=self._dbg)
 
-    def detect_cpu(self, expected_cpus, unmount=False):
-        self._connector = stlib.stlinkusb.StlinkUsbConnector(dbg=self._dbg)
+    def detect_cpu(self, expected_cpus, unmount=False, stlinkAddress=None):
+        self._connector = stlib.stlinkusb.StlinkUsbConnector(dbg=self._dbg, address=stlinkAddress)
         if unmount:
             self._connector.unmount_discovery()
         self._stlink = stlib.stlinkv2.Stlink(self._connector, dbg=self._dbg)
@@ -257,35 +259,49 @@ class PyStlink():
     def cmd_dump(self, params):
         cmd = params[0]
         params = params[1:]
+        r = []
         if cmd == 'core':
             # dump all core registers
             self._driver.core_halt()
+            #Return what we read for calling application
             for reg, val in self._driver.get_reg_all():
                 print("  %3s: %08x" % (reg, val))
+                r.append(val)
         elif self._driver.is_reg(cmd):
             # dump core register
             self._driver.core_halt()
             reg = cmd.upper()
             val = self._driver.get_reg(reg)
             print("  %3s: %08x" % (reg, val))
+            #Return what we read for calling application
+            r = val
         elif cmd == 'flash':
             size = int(params[0], 0) if params else self._flash_size * 1024
             data = self._driver.get_mem(self._driver.FLASH_START, size)
             self.print_buffer(self._driver.FLASH_START, data)
+            #Return what we read for calling application
+            r = data
         elif cmd == 'sram':
             size = int(params[0], 0) if params else self._sram_size * 1024
             data = self._driver.get_mem(self._driver.SRAM_START, size)
             self.print_buffer(self._driver.SRAM_START, data)
+            #Return what we read for calling application
+            r = data
         elif params:
             # dump memory from address with size
             addr = int(cmd, 0)
             data = self._driver.get_mem(addr, int(params[0], 0))
             self.print_buffer(addr, data)
+            #Return what we read for calling application
+            r = data
         else:
             # dump 32 bit register at address
             addr = int(cmd, 0)
             val = self._stlink.get_debugreg32(addr)
             print('  %08x: %08x' % (addr, val))
+            #Return what we read for calling application
+            r = val
+        return r
 
     def cmd_read(self, params):
         cmd = params[0]
@@ -380,8 +396,10 @@ class PyStlink():
     def cmd(self, param):
         cmd = param[0]
         params = param[1:]
+        r = []
+
         if cmd == 'dump' and params:
-            self.cmd_dump(params)
+            r = self.cmd_dump(params)
         elif cmd == 'dump16' and params:
             addr = int(params[0], 0)
             reg = self._stlink.get_debugreg16(addr)
@@ -419,7 +437,11 @@ class PyStlink():
         else:
             raise stlib.stlinkex.StlinkExceptionBadParam()
 
+        #Return operation result
+        return r
+
     def start(self, inargs=None):
+        # Init args
         parser = argparse.ArgumentParser(prog='pystlink', formatter_class=argparse.RawTextHelpFormatter, description=DESCRIPTION_STR, epilog=ACTIONS_HELP_STR)
         group_verbose = parser.add_argument_group(title='set verbosity level').add_mutually_exclusive_group()
         group_verbose.set_defaults(verbosity=1)
@@ -431,21 +453,29 @@ class PyStlink():
         parser.add_argument('-c', '--cpu', action='append', help='set expected CPU type [eg: STM32F051, STM32L4]')
         parser.add_argument('-r', '--no-run', action='store_true', help='do not run core when program end (if core was halted)')
         parser.add_argument('-u', '--no-unmount', action='store_true', help='do not unmount DISCOVERY from ST-Link/V2-1 on OS/X platform')
+        parser.add_argument('-a', '--stlinkAddress', action='store', help='set address of ST-Link device [for multiple attached ST-Link devices]')
         group_actions = parser.add_argument_group(title='actions')
         group_actions.add_argument('action', nargs='*', help='actions will be processed sequentially')
         if inargs is not None:
+            #When used as a library, show currently executed command
+            print("STLink CMD: " + inargs)
             inargs = inargs.split()
         args = parser.parse_args(args=inargs)
+        #Init variables
         self._dbg = stlib.dbg.Dbg(args.verbosity)
         runtime_status = 0
+        r = []
+
+        #Do stuff
         try:
-            self.detect_cpu(args.cpu, not args.no_unmount)
+            self.detect_cpu(args.cpu, not args.no_unmount, args.stlinkAddress)
             if args.action and self._driver is None:
                 raise stlib.stlinkex.StlinkExceptionCpuNotSelected()
             for action in args.action:
                 self._dbg.verbose('CMD: %s' % action)
                 try:
-                    self.cmd(action.split(':'))
+                    rs = self.cmd(action.split(':'))
+                    r.append(rs)
                 except stlib.stlinkex.StlinkExceptionBadParam as e:
                     raise e.set_cmd(action)
         except (stlib.stlinkex.StlinkExceptionBadParam, stlib.stlinkex.StlinkException) as e:
@@ -475,6 +505,9 @@ class PyStlink():
         if runtime_status:
             sys.exit(runtime_status)
 
+        #Force flushing at the end of the call (useful if using as package)
+        sys.stderr.flush()
+        return r
 
 if __name__ == "__main__":
     pystlink = PyStlink()

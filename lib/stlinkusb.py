@@ -22,7 +22,7 @@ class StlinkUsbConnector():
         }
     ]
 
-    def __init__(self, dbg=None):
+    def __init__(self, dbg=None, address=None):
         self._dbg = dbg
         self._dev_type = None
         self._xfer_counter = 0
@@ -30,6 +30,10 @@ class StlinkUsbConnector():
         for dev in devices:
             for dev_type in StlinkUsbConnector.DEV_TYPES:
                 if dev.idVendor == dev_type['idVendor'] and dev.idProduct == dev_type['idProduct']:
+                    if address:
+                        if str(dev.address) != address:
+                            self._dbg.verbose("Skipping ST-Link at address %s, searching %s"%(dev.address, address))
+                            continue
                     self._dev = dev
                     self._dev_type = dev_type
                     self._dbg.verbose("Successfully connected to ST-Link/%s" % dev_type['version'])
