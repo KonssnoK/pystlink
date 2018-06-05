@@ -1,5 +1,5 @@
-import stlib.stm32devices
-import stlib.stlinkex
+import stm32devices #Use relative import
+import stlinkex #Use relative import
 
 
 class Stm32():
@@ -46,7 +46,7 @@ class Stm32():
         if reg in Stm32.REGISTERS:
             index = Stm32.REGISTERS.index(reg)
             return self._stlink.get_reg(index)
-        raise stlib.stlinkex.StlinkException('Wrong register name')
+        raise stlinkex.StlinkException('Wrong register name')
 
     def set_reg(self, reg, value):
         self._dbg.debug('Stm32.set_reg(%s, 0x%08x)' % (reg, value))
@@ -54,7 +54,7 @@ class Stm32():
         if reg in Stm32.REGISTERS:
             index = Stm32.REGISTERS.index(reg)
             return self._stlink.set_reg(index, value)
-        raise stlib.stlinkex.StlinkException('Wrong register name')
+        raise stlinkex.StlinkException('Wrong register name')
 
     def get_mem(self, addr, size):
         self._dbg.debug('Stm32.get_mem(0x%08x, %d)' % (addr, size))
@@ -119,7 +119,7 @@ class Stm32():
 
     def fill_mem(self, addr, size, pattern):
         if pattern >= 256:
-            raise stlib.stlinkex.StlinkException('Fill pattern can by 8 bit number')
+            raise stlinkex.StlinkException('Fill pattern can by 8 bit number')
         self._dbg.debug('Stm32.fill_mem(0x%08x, 0x%02d)' % (addr, pattern))
         if size == 0:
             return
@@ -182,8 +182,8 @@ class Stm32():
 
     def flash_erase_all(self):
         self._dbg.debug('Stm32.flash_mass_erase()')
-        raise stlib.stlinkex.StlinkException('Erasing FLASH is not implemented for this MCU')
+        raise stlinkex.StlinkException('Erasing FLASH is not implemented for this MCU')
 
     def flash_write(self, addr, data, erase=False, verify=False, erase_sizes=None):
         self._dbg.debug('Stm32.flash_write(%s, [data:%dBytes], erase=%s, verify=%s, erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', len(data), erase, verify, erase_sizes))
-        raise stlib.stlinkex.StlinkException('Programing FLASH is not implemented for this MCU')
+        raise stlinkex.StlinkException('Programing FLASH is not implemented for this MCU')

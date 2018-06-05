@@ -85,6 +85,13 @@ class PyStlink():
         self._stlink = None
         self._driver = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self._connector:
+            self._connector.dispose()
+
     def find_mcus_by_core(self):
         cpuid = self._stlink.get_debugreg32(PyStlink.CPUID_REG)
         if cpuid == 0:
@@ -412,7 +419,7 @@ class PyStlink():
         else:
             raise stlib.stlinkex.StlinkExceptionBadParam()
 
-    def start(self):
+    def start(self, inargs=None):
         parser = argparse.ArgumentParser(prog='pystlink', formatter_class=argparse.RawTextHelpFormatter, description=DESCRIPTION_STR, epilog=ACTIONS_HELP_STR)
         group_verbose = parser.add_argument_group(title='set verbosity level').add_mutually_exclusive_group()
         group_verbose.set_defaults(verbosity=1)
@@ -426,7 +433,9 @@ class PyStlink():
         parser.add_argument('-u', '--no-unmount', action='store_true', help='do not unmount DISCOVERY from ST-Link/V2-1 on OS/X platform')
         group_actions = parser.add_argument_group(title='actions')
         group_actions.add_argument('action', nargs='*', help='actions will be processed sequentially')
-        args = parser.parse_args()
+        if inargs is not None:
+            inargs = inargs.split()
+        args = parser.parse_args(args=inargs)
         self._dbg = stlib.dbg.Dbg(args.verbosity)
         runtime_status = 0
         try:

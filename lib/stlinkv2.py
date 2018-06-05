@@ -1,4 +1,4 @@
-import stlib.stlinkex
+import stlinkex #Use relative import
 import struct
 import array
 import binascii
@@ -198,9 +198,9 @@ class Stlink():
             if freq >= f:
                 rx = self._connector.xfer([Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_APIV2_SWD_SET_FREQ, d], rx_len=2)
                 if rx[0] != 0x80:
-                    raise stlib.stlinkex.StlinkException("Error switching SWD frequency")
+                    raise stlinkex.StlinkException("Error switching SWD frequency")
                 return
-        raise stlib.stlinkex.StlinkException("Selected SWD frequency is too low")
+        raise stlinkex.StlinkException("Selected SWD frequency is too low")
 
     def enter_debug_swd(self):
         self._connector.xfer([Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_APIV2_ENTER, Stlink.STLINK_DEBUG_ENTER_SWD], rx_len=2)
@@ -210,7 +210,7 @@ class Stlink():
 
     def set_debugreg32(self, addr, data):
         if addr % 4:
-            raise stlib.stlinkex.StlinkException('get_mem_short address is not in multiples of 4')
+            raise stlinkex.StlinkException('get_mem_short address is not in multiples of 4')
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_APIV2_WRITEDEBUGREG]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=data)))
@@ -218,7 +218,7 @@ class Stlink():
 
     def get_debugreg32(self, addr):
         if addr % 4:
-            raise stlib.stlinkex.StlinkException('get_mem_short address is not in multiples of 4')
+            raise stlinkex.StlinkException('get_mem_short address is not in multiples of 4')
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_APIV2_READDEBUGREG]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         rx = self._connector.xfer(cmd, rx_len=8)
@@ -226,7 +226,7 @@ class Stlink():
 
     def get_debugreg16(self, addr):
         if addr % 2:
-            raise stlib.stlinkex.StlinkException('get_mem_short address is not in even')
+            raise stlinkex.StlinkException('get_mem_short address is not in even')
         val = self.get_debugreg32(addr & 0xfffffffc)
         if addr % 4:
             val >>= 16
@@ -249,11 +249,11 @@ class Stlink():
 
     def get_mem32(self, addr, size):
         if addr % 4:
-            raise stlib.stlinkex.StlinkException('get_mem32: Address must be in multiples of 4')
+            raise stlinkex.StlinkException('get_mem32: Address must be in multiples of 4')
         if size % 4:
-            raise stlib.stlinkex.StlinkException('get_mem32: Size must be in multiples of 4')
+            raise stlinkex.StlinkException('get_mem32: Size must be in multiples of 4')
         if size > Stlink.STLINK_MAXIMUM_TRANSFER_SIZE:
-            raise stlib.stlinkex.StlinkException('get_mem32: Size for reading is %d but maximum can be %d' % (size, Stlink.STLINK_MAXIMUM_TRANSFER_SIZE))
+            raise stlinkex.StlinkException('get_mem32: Size for reading is %d but maximum can be %d' % (size, Stlink.STLINK_MAXIMUM_TRANSFER_SIZE))
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_READMEM_32BIT]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=size)))
@@ -261,11 +261,11 @@ class Stlink():
 
     def set_mem32(self, addr, data):
         if addr % 4:
-            raise stlib.stlinkex.StlinkException('set_mem32: Address must be in multiples of 4')
+            raise stlinkex.StlinkException('set_mem32: Address must be in multiples of 4')
         if len(data) % 4:
-            raise stlib.stlinkex.StlinkException('set_mem32: Size must be in multiples of 4')
+            raise stlinkex.StlinkException('set_mem32: Size must be in multiples of 4')
         if len(data) > Stlink.STLINK_MAXIMUM_TRANSFER_SIZE:
-            raise stlib.stlinkex.StlinkException('set_mem32: Size for writing is %d but maximum can be %d' % (len(data), Stlink.STLINK_MAXIMUM_TRANSFER_SIZE))
+            raise stlinkex.StlinkException('set_mem32: Size for writing is %d but maximum can be %d' % (len(data), Stlink.STLINK_MAXIMUM_TRANSFER_SIZE))
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_WRITEMEM_32BIT]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=len(data))))
@@ -273,7 +273,7 @@ class Stlink():
 
     def get_mem8(self, addr, size):
         if size > 64:
-            raise stlib.stlinkex.StlinkException('get_mem8: Size for reading is %d but maximum can be 64' % size)
+            raise stlinkex.StlinkException('get_mem8: Size for reading is %d but maximum can be 64' % size)
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_READMEM_8BIT]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=size)))
@@ -281,7 +281,7 @@ class Stlink():
 
     def set_mem8(self, addr, data):
         if len(data) > 64:
-            raise stlib.stlinkex.StlinkException('set_mem8: Size for writing is %d but maximum can be 64' % len(data))
+            raise stlinkex.StlinkException('set_mem8: Size for writing is %d but maximum can be 64' % len(data))
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_WRITEMEM_8BIT]
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=addr)))
         cmd.extend(list(Stlink.to_bytes(byteorder='little', data=len(data))))

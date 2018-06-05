@@ -1,7 +1,6 @@
 import time
-import stlib.stm32
-import stlib.stlinkex
-
+import stm32 #Use relative import
+import stlinkex #Use relative import
 
 class Flash():
     FLASH_REG_BASE = 0x40022000
@@ -62,7 +61,7 @@ class Flash():
         Flash.FLASH_CR_REG = reg_bank + Flash.FLASH_CR_INDEX
         Flash.FLASH_AR_REG = reg_bank + Flash.FLASH_AR_INDEX
         if self._stlink.target_voltage < 2.0:
-            raise stlib.stlinkex.StlinkException('Supply voltage is %.2fV, but minimum for FLASH program or erase is 2.0V' % self._stlink.target_voltage)
+            raise stlinkex.StlinkException('Supply voltage is %.2fV, but minimum for FLASH program or erase is 2.0V' % self._stlink.target_voltage)
         self.unlock()
 
     def unlock(self):
@@ -74,7 +73,7 @@ class Flash():
             self._stlink.set_debugreg32(Flash.FLASH_KEYR_REG, 0xcdef89ab)
         # programing locked
         if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_LOCK_BIT:
-            raise stlib.stlinkex.StlinkException('Error unlocking FLASH')
+            raise stlinkex.StlinkException('Error unlocking FLASH')
 
     def lock(self):
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_LOCK_BIT)
@@ -143,23 +142,23 @@ class Flash():
                     self._dbg.bargraph_done()
                 return
             time.sleep(wait_time / 20)
-        raise stlib.stlinkex.StlinkException('Operation timeout')
+        raise stlinkex.StlinkException('Operation timeout')
 
     def wait_for_breakpoint(self, wait_time):
         end_time = time.time() + wait_time
-        while time.time() < end_time and not self._stlink.get_debugreg32(stlib.stm32.Stm32.DHCSR_REG) & stlib.stm32.Stm32.DHCSR_STATUS_HALT_BIT:
+        while time.time() < end_time and not self._stlink.get_debugreg32(stm32.Stm32.DHCSR_REG) & stm32.Stm32.DHCSR_STATUS_HALT_BIT:
             time.sleep(wait_time / 20)
         self.end_of_operation(self._stlink.get_debugreg32(Flash.FLASH_SR_REG))
 
     def end_of_operation(self, status):
         if status != Flash.FLASH_SR_EOP_BIT:
-            raise stlib.stlinkex.StlinkException('Error writing FLASH with status (FLASH_SR) %08x' % status)
+            raise stlinkex.StlinkException('Error writing FLASH with status (FLASH_SR) %08x' % status)
         self._stlink.set_debugreg32(Flash.FLASH_SR_REG, status)
 
 
 # support all STM32F MCUs with page access to FLASH
 # (STM32F0xx, STM32F1xx and also STM32F3xx)
-class Stm32FP(stlib.stm32.Stm32):
+class Stm32FP(stm32.Stm32):
     def _flash_erase_all(self, bank=0):
         flash = Flash(self, self._stlink, self._dbg, bank=bank)
         flash.erase_all()
@@ -187,7 +186,7 @@ class Stm32FP(stlib.stm32.Stm32):
             data = data[self._stlink.STLINK_MAXIMUM_TRANSFER_SIZE:]
             flash.write(addr, block)
             if verify and block != self._stlink.get_mem32(addr, len(block)):
-                raise stlib.stlinkex.StlinkException('Verify error at block address: 0x%08x' % addr)
+                raise stlinkex.StlinkException('Verify error at block address: 0x%08x' % addr)
             addr += len(block)
         flash.lock()
         self._dbg.bargraph_done()
@@ -197,7 +196,7 @@ class Stm32FP(stlib.stm32.Stm32):
         if addr is None:
             addr = self.FLASH_START
         elif addr % 2:
-            raise stlib.stlinkex.StlinkException('Start address is not aligned to half-word')
+            raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_write(addr, data, erase=erase, verify=verify, erase_sizes=erase_sizes)
 
 
@@ -216,7 +215,7 @@ class Stm32FPXL(Stm32FP):
         if addr is None:
             addr = self.FLASH_START
         elif addr % 2:
-            raise stlib.stlinkex.StlinkException('Start address is not aligned to half-word')
+            raise stlinkex.StlinkException('Start address is not aligned to half-word')
         if (addr - self.FLASH_START) + len(data) <= Stm32FPXL.BANK_SIZE:
             self._flash_write(addr, data, erase=erase, verify=verify, erase_sizes=erase_sizes, bank=0)
         elif (addr - self.FLASH_START) > Stm32FPXL.BANK_SIZE:
