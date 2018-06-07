@@ -244,7 +244,7 @@ class Stlink():
 
     def set_reg(self, reg, data):
         cmd = [Stlink.STLINK_DEBUG_COMMAND, Stlink.STLINK_DEBUG_APIV2_WRITEREG, reg]
-        cmd.extend(list(Stlink.to_bytes(4, byteorder='little', data=data)))
+        cmd.extend(list(Stlink.to_bytes(byteorder='little', data=data)))
         self._connector.xfer(cmd, rx_len=2)
 
     def get_mem32(self, addr, size):

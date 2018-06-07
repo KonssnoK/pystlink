@@ -20,6 +20,7 @@ class Flash():
     FLASH_CR_MER_BIT = 0x00000004
     FLASH_CR_STRT_BIT = 0x00000040
     FLASH_SR_BUSY_BIT = 0x00000001
+    FLASH_SR_ERLYBSY_BIT = 0x00000002
     FLASH_SR_PGERR_BIT = 0x00000004
     FLASH_SR_WRPRTERR_BIT = 0x00000010
     FLASH_SR_EOP_BIT = 0x00000020
@@ -66,11 +67,14 @@ class Flash():
 
     def unlock(self):
         self._driver.core_reset_halt()
+
         # programing locked
         if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_LOCK_BIT:
             # unlock keys
             self._stlink.set_debugreg32(Flash.FLASH_KEYR_REG, 0x45670123)
             self._stlink.set_debugreg32(Flash.FLASH_KEYR_REG, 0xcdef89ab)
+        else:
+            print("UNLOCK: FLASH already unlocked!? FLASH_CR:%s"%hex(self._stlink.get_debugreg32(Flash.FLASH_CR_REG)))
         # programing locked
         if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_LOCK_BIT:
             raise stlinkex.StlinkException('Error unlocking FLASH')
@@ -152,6 +156,12 @@ class Flash():
 
     def end_of_operation(self, status):
         if status != Flash.FLASH_SR_EOP_BIT:
+            if status & Flash.FLASH_SR_WRPRTERR_BIT:
+                self._dbg.info("WRPRTERR: Writing page without UNLOCK?")
+            if status & Flash.FLASH_SR_PGERR_BIT:
+                self._dbg.info("PGERR: Writing page without ERASE?")
+            if status & Flash.FLASH_SR_ERLYBSY_BIT:
+                self._dbg.info("ERLYBSY set -> ?")
             raise stlinkex.StlinkException('Error writing FLASH with status (FLASH_SR) %08x' % status)
         self._stlink.set_debugreg32(Flash.FLASH_SR_REG, status)
 

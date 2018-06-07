@@ -1,7 +1,7 @@
 import usb.core
 import usb.util
 import stlinkex #Use relative import
-
+import time
 
 class StlinkUsbConnector():
     STLINK_CMD_SIZE_V2 = 16
@@ -67,6 +67,7 @@ class StlinkUsbConnector():
         return data[:size]
 
     def xfer(self, cmd, data=None, rx_len=None, retry=0, tout=200):
+        prev = ""
         while (True):
             try:
                 if len(cmd) > self.STLINK_CMD_SIZE_V2:
@@ -76,13 +77,17 @@ class StlinkUsbConnector():
                 self._write(cmd, tout)
                 if data:
                     self._write(data, tout)
+                #We wait 1ms to ensure a slow USB channel finished writing on the bus.
+                #Without this errors like reading 0 instead of real value of the register could occur.
+                time.sleep(0.001)
                 if rx_len:
                     return self._read(rx_len)
             except usb.core.USBError as e:
                 if retry:
+                    prev += str(e) #Store the first occurred error, which is the most meaningful
                     retry -= 1
                     continue
-                raise stlinkex.StlinkException("USB Error: %s" % e)
+                raise stlinkex.StlinkException("USB Error: %s\n Previous:\n%s" % (e, prev))
             return None
 
     def unmount_discovery(self):
