@@ -37,8 +37,9 @@ list of available actions:
   dump16:{addr}          print content of 16 bit memory register
   dump8:{addr}           print content of 8 bit memory register
 
-  set:{reg}:{data}     set register (halt core)
-  set:{addr}:{data}    set 32 bit memory register
+  set:{reg}:{data}           set register (halt core)
+  set:{addr}:{data}          set 32 bit memory register
+  set:flash:{addr}:{data}    set 32 bit flash memory (works only on erased memory or writing 0)
 
   read:{addr}:{size}:{file}      read memory with size into file
   read:sram[:{size}]:{file}      read SRAM into file
@@ -214,6 +215,10 @@ class PyStlink():
         self.load_driver()
 
     def print_buffer(self, addr, data, bytes_per_line=16):
+        #When used as a library the buffer is returned directly to the caller, no need to dump it
+        if self._dbg.is_library_quiet():
+            return
+
         prev_chunk = []
         same_chunk = False
         for i in range(0, len(data), bytes_per_line):
@@ -322,12 +327,22 @@ class PyStlink():
         self.store_file(addr, data, file_name)
 
     def cmd_set(self, params):
+        # Check for flash address
+        flash = False
+        if params and params[0] == 'flash':
+            flash = True
+            params = params[1:]
+        #Get the address/registry name
         cmd = params[0]
         params = params[1:]
         if not params:
             raise stlib.stlinkex.StlinkExceptionBadParam('Missing argument')
         data = int(params[0], 0)
-        if self._driver.is_reg(cmd):
+
+        if flash:
+            addr = int(cmd, 0)
+            self._driver.flash_write(addr, stlib.stlinkv2.Stlink.to_bytes('little', data))
+        elif self._driver.is_reg(cmd):
             self._driver.core_halt()
             reg = cmd.upper()
             self._driver.set_reg(reg, data)
@@ -345,7 +360,7 @@ class PyStlink():
         elif params:
             self._driver.fill_mem(int(cmd, 0), int(params[0], 0), value)
         else:
-            raise stlib.stlinkex.StlinkExceptionBadParam()
+            raise stlib.stlinkex.StlinkExceptionBadParam('Wrong parameter')
 
     def cmd_write(self, params):
         mem = self.read_file(params[-1])
@@ -368,15 +383,19 @@ class PyStlink():
             self._driver.set_mem(addr, data)
 
     def cmd_flash(self, params):
+        #Check for erase
         erase = False
         if params[0] == 'erase':
             params = params[1:]
+            #Check for mass erase
             if not params:
                 self._driver.flash_erase_all()
                 return
             erase = True
+        #Read the file
         mem = self.read_file(params[-1])
         params = params[:-1]
+        #Check for verify
         verify = False
         if params and params[0] == 'verify':
             verify = True
@@ -388,6 +407,7 @@ class PyStlink():
                 params = params[1:]
         if params:
             raise stlib.stlinkex.StlinkExceptionBadParam('Address for write is set by file')
+        #Do the magic
         for addr, data in mem:
             if addr is None:
                 addr = start_addr
@@ -445,10 +465,11 @@ class PyStlink():
         parser = argparse.ArgumentParser(prog='pystlink', formatter_class=argparse.RawTextHelpFormatter, description=DESCRIPTION_STR, epilog=ACTIONS_HELP_STR)
         group_verbose = parser.add_argument_group(title='set verbosity level').add_mutually_exclusive_group()
         group_verbose.set_defaults(verbosity=1)
-        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=0)
-        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=1, help='default')
-        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=2)
-        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=3)
+        group_verbose.add_argument('-lq', '--libraryquiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.lq)
+        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.q)
+        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.i, help='default')
+        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.v)
+        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.d)
         parser.add_argument('-V', '--version', action='version', version=VERSION_STR)
         parser.add_argument('-c', '--cpu', action='append', help='set expected CPU type [eg: STM32F051, STM32L4]')
         parser.add_argument('-r', '--no-run', action='store_true', help='do not run core when program end (if core was halted)')
