@@ -9,6 +9,8 @@ Additional features:
 - Support for Pystlink integration as a package. Must be used with "with" statement (Fixed not releasing resources).
 - Support for multiple STLink use by new arg '-a', identifying the Address of the STLink device
 - Support for dump data retrieval, so that it can be used by the calling application
+- Support for single 32bit flash write
+- Multiple fixes to the library behaviour based on real use in a test environment. (Flash unlock, Flash write, Erase/Write)
 
 **NOTES**:
 
@@ -22,6 +24,10 @@ with pystlink.PyStlink() as stlink:
     d = stlink.start("dump:0x20007F80:4 -q -a2")
     print(d)
 ```
+
+**Known Issues**:
+
+- I managed to make the STLink fail to read the CPUID after a Flash operation. Instead of the correct core it will return 0. May be hardware dependant.
 
 **EOF**
 
