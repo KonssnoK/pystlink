@@ -96,7 +96,18 @@ class Flash():
 
     def erase_pages(self, flash_start, erase_sizes, addr, size):
         page_addr = flash_start
-        self._dbg.bargraph_start('Erasing FLASH', value_min=addr, value_max=addr + size)
+        #Compute real page start and end address
+        erase_mask = -1
+        addr_end = addr + size
+        if len(erase_sizes) == 1:
+            # Current support just for single sized page flash memories
+            erase_mask = ~(erase_sizes[0] - 1)
+            addr_end = ((addr + size) & erase_mask)
+            if (addr + size) > addr_end:
+                addr_end += erase_sizes[0]
+
+        self._dbg.bargraph_start('Erasing FLASH [0x%08X-0x%08X]'%(addr & erase_mask, addr_end), value_min=addr, value_max=addr + size)
+        #Do erase
         while True:
             for page_size in erase_sizes:
                 if addr < page_addr + page_size:
@@ -188,7 +199,7 @@ class Stm32FP(stm32.Stm32):
                 flash.erase_pages(self.FLASH_START, erase_sizes, addr, len(data))
             else:
                 flash.erase_all()
-        self._dbg.bargraph_start('Writing FLASH', value_min=addr, value_max=addr + len(data))
+        self._dbg.bargraph_start('Writing FLASH [0x%08X-0x%08X]'%(addr, addr + len(data)), value_min=addr, value_max=addr + len(data))
         flash.init_write(Stm32FP.SRAM_START)
         while(data):
             self._dbg.bargraph_update(value=addr)
@@ -201,6 +212,18 @@ class Stm32FP(stm32.Stm32):
         flash.lock()
         self._dbg.bargraph_done()
 
+    def _flash_erase(self, addr, datalen, erase_sizes=None, bank=0):
+        """ Init Flash, call flash erase operation, lock flash
+        """
+        flash = Flash(self, self._stlink, self._dbg, bank=bank)
+        if erase_sizes:
+            flash.erase_pages(self.FLASH_START, erase_sizes, addr, datalen)
+        else:
+            flash.erase_all()
+        #flash is unlocked upon initialization
+        flash.lock()
+
+
     def flash_write(self, addr, data, erase=False, verify=False, erase_sizes=None):
         self._dbg.debug('Stm32FP.flash_write(%s, [data:%dBytes], erase=%s, verify=%s, erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', len(data), erase, verify, erase_sizes))
         if addr is None:
@@ -208,6 +231,16 @@ class Stm32FP(stm32.Stm32):
         elif addr % 2:
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_write(addr, data, erase=erase, verify=verify, erase_sizes=erase_sizes)
+
+    def flash_erase(self, addr, datalen, erase_sizes=None):
+        """ Erase pages from starting address for a given len (rounded up to page size)
+        """
+        self._dbg.debug('Stm32FP.flash_erase(%s, [data:%dBytes], erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', datalen, erase_sizes))
+        if addr is None:
+            addr = self.FLASH_START
+        elif addr % 2:
+            raise stlinkex.StlinkException('Start address is not aligned to half-word')
+        self._flash_erase(addr, datalen, erase_sizes=erase_sizes)
 
 
 # support STM32F MCUs with page access to FLASH and two banks

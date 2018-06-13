@@ -407,11 +407,17 @@ class PyStlink():
                 params = params[1:]
         if params:
             raise stlib.stlinkex.StlinkExceptionBadParam('Address for write is set by file')
-        #Do the magic
+        #We first do all erases and then all writes, or we could erase something we already wrote!
+        if erase:
+            for addr, data in mem:
+                if addr is None:
+                    addr = start_addr
+                self._driver.flash_erase(addr, len(data), erase_sizes=self._mcus_by_devid['erase_sizes'])
+        #Now we can write anything we want
         for addr, data in mem:
             if addr is None:
                 addr = start_addr
-            self._driver.flash_write(addr, data, erase=erase, verify=verify, erase_sizes=self._mcus_by_devid['erase_sizes'])
+            self._driver.flash_write(addr, data, verify=verify)
 
     def cmd(self, param):
         cmd = param[0]

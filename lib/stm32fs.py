@@ -151,7 +151,7 @@ class Flash():
 
     def erase_sectors(self, flash_start, erase_sizes, addr, size):
         erase_addr = flash_start
-        self._dbg.bargraph_start('Erasing FLASH', value_min=flash_start, value_max=flash_start + size)
+        self._dbg.bargraph_start('Erasing FLASH [0x%08X-0x%08X]'%(flash_start, flash_start + size), value_min=flash_start, value_max=flash_start + size)
         sector = 0
         while True:
             for erase_size in erase_sizes:
@@ -237,7 +237,7 @@ class Stm32FS(stm32.Stm32):
                 flash.erase_sectors(self.FLASH_START, erase_sizes, addr, len(data))
             else:
                 flash.erase_all()
-        self._dbg.bargraph_start('Writing FLASH', value_min=addr, value_max=addr + len(data))
+        self._dbg.bargraph_start('Writing FLASH [0x%08X-0x%08X]'%(addr, addr + len(data)), value_min=addr, value_max=addr + len(data))
         flash.init_write(Stm32FS.SRAM_START)
         while(data):
             self._dbg.bargraph_update(value=addr)
@@ -249,3 +249,8 @@ class Stm32FS(stm32.Stm32):
             addr += len(block)
         flash.lock()
         self._dbg.bargraph_done()
+
+    def flash_erase(self, addr, datalen, erase_sizes=None):
+        """ TODO Missing flash_erase operation
+        """
+        raise stlinkex.StlinkException('Not implemented. Sorry :(')
