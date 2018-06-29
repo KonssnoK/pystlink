@@ -96,32 +96,70 @@ class PyStlink():
             self._connector.dispose()
 
     def find_mcus_by_core(self):
-        cpuid = self._stlink.get_debugreg32(PyStlink.CPUID_REG)
-        if cpuid == 0:
-            raise stlib.stlinkex.StlinkException('Not connected to CPU')
-        self._dbg.verbose("CPUID:  %08x" % cpuid)
-        partno = 0xfff & (cpuid >> 4)
-        for mcu_core in stlib.stm32devices.DEVICES:
-            if mcu_core['part_no'] == partno:
-                self._mcus_by_core = mcu_core
-                return
-        raise stlib.stlinkex.StlinkException('PART_NO: 0x%03x is not supported' % partno)
+        i = 0
+        while True:
+            cpuid = self._stlink.get_debugreg32(PyStlink.CPUID_REG)
+            if cpuid == 0:
+                if i == 100:
+                    raise stlib.stlinkex.StlinkException('Not connected to CPU')
+                else:
+                    time.sleep(0.1)
+                    i+=1
+                    continue
+
+            self._dbg.verbose("CPUID:  %08x" % cpuid)
+            partno = 0xfff & (cpuid >> 4)
+            for mcu_core in stlib.stm32devices.DEVICES:
+                if mcu_core['part_no'] == partno:
+                    self._mcus_by_core = mcu_core
+                    if i > 0:
+                        self._dbg.info("CPUID: found after %d0ms" % i)
+                        print("CPUID: found after %d0ms" % i)
+                    return
+            #if partno is 0 we failed to read.
+            if i == 10000:
+                raise stlib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device!')
+            if partno == 0:
+                time.sleep(0.01)
+                i+=1
+                continue
+            else:
+                raise stlib.stlinkex.StlinkException('PART_NO: 0x%03x is not supported' % partno)
+
+
+        #self._dbg.verbose("CPUID:  %08x" % cpuid)
+        #partno = 0xfff & (cpuid >> 4)
+        #for mcu_core in stlib.stm32devices.DEVICES:
+        #    if mcu_core['part_no'] == partno:
+        #        self._mcus_by_core = mcu_core
+        #        return
+        #raise stlib.stlinkex.StlinkException('PART_NO: 0x%03x is not supported' % partno)
 
     def find_mcus_by_devid(self):
         # STM32H7 hack: this MCU has ID-CODE on different address than STM32F7
-        devid = 0x000
-        idcode_regs = self._mcus_by_core['idcode_reg']
-        if isinstance(self._mcus_by_core['idcode_reg'], int):
-            idcode_regs = [idcode_regs]
-        for idcode_reg in idcode_regs:
-            idcode = self._stlink.get_debugreg32(idcode_reg)
-            self._dbg.verbose("IDCODE: %08x" % idcode)
-            devid = 0xfff & idcode
-            for mcu_devid in self._mcus_by_core['devices']:
-                if mcu_devid['dev_id'] == devid:
-                    self._mcus_by_devid = mcu_devid
-                    return
-        raise stlib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
+        i = 0
+        while True:
+            devid = 0x000
+            idcode_regs = self._mcus_by_core['idcode_reg']
+            if isinstance(self._mcus_by_core['idcode_reg'], int):
+                idcode_regs = [idcode_regs]
+            for idcode_reg in idcode_regs:
+                idcode = self._stlink.get_debugreg32(idcode_reg)
+                self._dbg.verbose("IDCODE: %08x" % idcode)
+                devid = 0xfff & idcode
+                for mcu_devid in self._mcus_by_core['devices']:
+                    if mcu_devid['dev_id'] == devid:
+                        self._mcus_by_devid = mcu_devid
+                        if i > 0:
+                            self._dbg.info("DEV_ID: found after %d0ms" % i)
+                            print("DEV_ID: found after %d0ms" % i)
+                        return
+            if i == 1000:
+                raise stlib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
+            else:
+                time.sleep(0.01)
+                i += 1
+                continue
 
     def find_mcus_by_flash_size(self):
         self._flash_size = self._stlink.get_debugreg16(self._mcus_by_devid['flash_size_reg'])
