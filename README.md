@@ -11,6 +11,7 @@ Additional features:
 - Support for dump data retrieval, so that it can be used by the calling application
 - Support for single 32bit flash write
 - Multiple fixes to the library behaviour based on real use in a test environment. (Flash unlock, Flash write, Erase/Write)
+- Handling of ST-Link device delays in retrieving the CPU_ID and the MCU. (Usually up to 1500ms, unknown causes)
 
 **NOTES**:
 
@@ -27,7 +28,7 @@ with pystlink.PyStlink() as stlink:
 
 **Known Issues**:
 
-- I managed to make the STLink fail to read the CPUID after a Flash operation. Instead of the correct core it will return 0. May be hardware dependant.
+- None.
 
 **EOF**
 
@@ -60,7 +61,7 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 - pip installer
 - proxy to GDB
 - and maybe GUI
-- support for ST-Link/V1 is NOT planed, use ST-Link/V2 or V2-1 instead
+- support for ST-Link/V1 is NOT planned, use ST-Link/V2 or V2-1 instead
 
 ## Install
 
@@ -86,6 +87,8 @@ usage: pystlink [-h] [-q | -i | -v | -d] [-V] [-c CPU] [-r] [-u]
 pystlink v0.0.0 (ST-LinkV2)
 (c)2015 by pavel.revak@gmail.com
 https://github.com/pavelrevak/pystlink
+(c)2018 by kons.snok@gmail.com
+https://github.com/KonssnoK/pystlink
 
 optional arguments:
   -h, --help         show this help message and exit
@@ -95,6 +98,7 @@ optional arguments:
   -u, --no-unmount   do not unmount DISCOVERY from ST-Link/V2-1 on OS/X platform
 
 set verbosity level:
+  -lq --libraryquiet
   -q, --quiet
   -i, --info         default
   -v, --verbose
