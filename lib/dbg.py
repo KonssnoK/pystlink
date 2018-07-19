@@ -35,10 +35,10 @@ class Dbg():
     def message(self, msg, level=Verbosity.q):
         self._msg(msg, level)
 
-    def error(self, msg, level=Verbosity.q):
+    def error(self, msg, level=Verbosity.lq):
         self._msg('*** %s ***' % msg, level)
 
-    def warning(self, msg, level=Verbosity.q):
+    def warning(self, msg, level=Verbosity.lq):
         self._msg(' * %s' % msg, level)
 
     def print_bargraph(self, percent):

@@ -66,7 +66,7 @@ class StlinkUsbConnector():
         self._dbg.debug("  USB < %s" % ' '.join(['%02x' % i for i in data]))
         return data[:size]
 
-    def xfer(self, cmd, data=None, rx_len=None, retry=0, tout=200):
+    def xfer(self, cmd, data=None, rx_len=None, retry=3, tout=200):
         prev = ""
         while (True):
             try:
@@ -84,6 +84,10 @@ class StlinkUsbConnector():
                     return self._read(rx_len)
             except usb.core.USBError as e:
                 if retry:
+                    if "reaping" in e.strerror:
+                        self._dbg.info("Error in LibUSB. Trying to recover it...")
+                        self._dev.reset()
+                        time.sleep(1)
                     prev += str(e) #Store the first occurred error, which is the most meaningful
                     retry -= 1
                     continue

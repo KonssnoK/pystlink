@@ -96,6 +96,7 @@ class PyStlink():
             self._connector.dispose()
 
     def find_mcus_by_core(self):
+        parts = set([]) #Store all the part_no we find while waiting
         i = 0
         while True:
             cpuid = self._stlink.get_debugreg32(PyStlink.CPUID_REG)
@@ -113,27 +114,20 @@ class PyStlink():
                 if mcu_core['part_no'] == partno:
                     self._mcus_by_core = mcu_core
                     if i > 0:
-                        self._dbg.info("CPUID: found after %d0ms" % i)
-                        print("CPUID: found after %d0ms" % i)
+                        self._dbg.warning("CPUID: found after %d0ms. PART_NO: %s"%(i, str(parts)))
                     return
-            #if partno is 0 we failed to read.
+
+            #We loop only if we didn't find anything
+            parts.add(partno)
+            time.sleep(0.01)
+            i+=1
+
+            #But we can't loop forever
             if i == 10000:
-                raise stlib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device!')
-            if partno == 0:
-                time.sleep(0.01)
-                i+=1
-                continue
-            else:
-                raise stlib.stlinkex.StlinkException('PART_NO: 0x%03x is not supported' % partno)
+                raise stlib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device with PART_NO: %s'%(str(parts)))
 
+        return
 
-        #self._dbg.verbose("CPUID:  %08x" % cpuid)
-        #partno = 0xfff & (cpuid >> 4)
-        #for mcu_core in stlib.stm32devices.DEVICES:
-        #    if mcu_core['part_no'] == partno:
-        #        self._mcus_by_core = mcu_core
-        #        return
-        #raise stlib.stlinkex.StlinkException('PART_NO: 0x%03x is not supported' % partno)
 
     def find_mcus_by_devid(self):
         # STM32H7 hack: this MCU has ID-CODE on different address than STM32F7
@@ -151,26 +145,42 @@ class PyStlink():
                     if mcu_devid['dev_id'] == devid:
                         self._mcus_by_devid = mcu_devid
                         if i > 0:
-                            self._dbg.info("DEV_ID: found after %d0ms" % i)
-                            print("DEV_ID: found after %d0ms" % i)
+                            self._dbg.warning("DEV_ID: found after %d0ms" % i)
                         return
-            if i == 1000:
+            #We loop only if we didn't find anything
+            time.sleep(0.01)
+            i += 1
+
+            #But we can't loop forever
+            if i >= 1000:
                 raise stlib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
-            else:
-                time.sleep(0.01)
-                i += 1
-                continue
+        return
 
     def find_mcus_by_flash_size(self):
-        self._flash_size = self._stlink.get_debugreg16(self._mcus_by_devid['flash_size_reg'])
-        self._mcus = []
-        for mcu in self._mcus_by_devid['devices']:
-            if mcu['flash_size'] == self._flash_size:
-                self._mcus.append(mcu)
-        if not self._mcus:
-            raise stlib.stlinkex.StlinkException('Connected CPU with DEV_ID: 0x%03x and FLASH size: %dKB is not supported' % (
-                self._mcus_by_devid['dev_id'], self._flash_size
-            ))
+        i = 0
+        while True:
+            self._flash_size = self._stlink.get_debugreg16(self._mcus_by_devid['flash_size_reg'])
+            self._mcus = []
+            for mcu in self._mcus_by_devid['devices']:
+                if mcu['flash_size'] == self._flash_size:
+                    self._mcus.append(mcu)
+                    if i > 0:
+                        self._dbg.warning("FLASH_SIZE found after %d0ms." % i)
+
+            if self._mcus:
+                return
+
+            #We loop only if we didn't find anything
+            time.sleep(0.01)
+            i += 1
+
+            #But we can't loop forever
+            if i >= 1000:
+                raise stlib.stlinkex.StlinkException('Connected CPU with DEV_ID: 0x%03x and FLASH size: %dKB is not supported' % (
+                    self._mcus_by_devid['dev_id'], self._flash_size
+                ))
+            
+        return
 
     def fix_cpu_type(self, cpu_type):
         cpu_type = cpu_type.upper()
