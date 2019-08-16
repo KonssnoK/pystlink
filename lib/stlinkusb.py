@@ -84,7 +84,7 @@ class StlinkUsbConnector():
                     return self._read(rx_len)
             except usb.core.USBError as e:
                 if retry:
-                    if "reaping" in e.strerror:
+                    if ("reaping" in e.strerror) or ("timeout" in e.strerror):
                         self._dbg.info("Error in LibUSB. Trying to recover it...")
                         self._dev.reset()
                         time.sleep(1)

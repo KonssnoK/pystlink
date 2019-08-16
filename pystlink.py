@@ -102,10 +102,10 @@ class PyStlink():
                     i+=1
                     continue
 
-            self._dbg.verbose("CPUID:  %08x" % cpuid)
             partno = 0xfff & (cpuid >> 4)
             for mcu_core in stlib.stm32devices.DEVICES:
                 if mcu_core['part_no'] == partno:
+                    self._dbg.verbose("CPUID:  %08x" % cpuid)
                     self._mcus_by_core = mcu_core
                     if i > 0:
                         self._dbg.warning("CPUID: found after %d0ms. PART_NO: %s"%(i, str(parts)))
@@ -118,6 +118,7 @@ class PyStlink():
 
             #But we can't loop forever
             if i == 10000:
+                self._dbg.verbose("CPUID:  %08x" % cpuid)
                 raise stlib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device with PART_NO: %s'%(str(parts)))
 
         return
@@ -133,10 +134,10 @@ class PyStlink():
                 idcode_regs = [idcode_regs]
             for idcode_reg in idcode_regs:
                 idcode = self._stlink.get_debugreg32(idcode_reg)
-                self._dbg.verbose("IDCODE: %08x" % idcode)
                 devid = 0xfff & idcode
                 for mcu_devid in self._mcus_by_core['devices']:
                     if mcu_devid['dev_id'] == devid:
+                        self._dbg.verbose("IDCODE: %08x" % idcode)
                         self._mcus_by_devid = mcu_devid
                         if i > 0:
                             self._dbg.warning("DEV_ID: found after %d0ms" % i)
@@ -147,6 +148,7 @@ class PyStlink():
 
             #But we can't loop forever
             if i >= 1000:
+                self._dbg.verbose("IDCODE: %08x" % idcode)
                 raise stlib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
         return
 
