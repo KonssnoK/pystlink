@@ -5,13 +5,13 @@ Python tool for manipulating with STM32 MCUs using **ST-Link** in-system program
 This is a modified version by Kons.
 Additional features:
 
-- Support for python 2.7. (Python3 not tested, but i guess not supported)
 - Support for Pystlink integration as a package. Must be used with "with" statement (Fixed not releasing resources).
 - Support for multiple STLink use by new arg '-a', identifying the Address of the STLink device
 - Support for dump data retrieval, so that it can be used by the calling application
 - Support for single 32bit flash write
 - Multiple fixes to the library behaviour based on real use in a test environment. (Flash unlock, Flash write, Erase/Write)
 - Handling of ST-Link device delays in retrieving the CPU_ID and the MCU. (Usually up to 1500ms, unknown causes)
+- Partial support for OPTbyte erase/write
 
 **NOTES**:
 
@@ -67,9 +67,9 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 
 ### Requirements
 
-- **Python v2.7** (tested with python-2.7)
-- [**pyusb**](https://github.com/walac/pyusb)
-- [**libusb**](https://github.com/libusb/libusb) or any other libusb driver
+- **Python v3.X**
+- [**pyusb**](https://github.com/walac/pyusb)  (pip install pyusb)
+- [**libusb**](https://github.com/libusb/libusb) or any other libusb driver (pip install libusb)
   - for Windows download [latest windows binaries](https://sourceforge.net/projects/libusbk/files/libusbK-release/3.0.7.0/libusbK-3.0.7.0-bin-chk.7z/download)
   - Create installer for your STLINK device and install using the generated INF file
 
