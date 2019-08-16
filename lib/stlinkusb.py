@@ -1,6 +1,6 @@
 import usb.core
 import usb.util
-import stlinkex #Use relative import
+from . import stlinkex #Use relative import
 import time
 
 class StlinkUsbConnector():

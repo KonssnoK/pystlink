@@ -11,12 +11,6 @@ import stlib.stlinkex
 import stlib.dbg
 import stlib.srec
 
-#Define filenotfound for python 2.7
-try:
-    FileNotFoundError
-except NameError:
-    FileNotFoundError = IOError
-
 VERSION_STR = "pystlink v0.0.0 (ST-LinkV2)"
 
 DESCRIPTION_STR = VERSION_STR + """

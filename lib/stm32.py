@@ -1,5 +1,5 @@
-import stm32devices #Use relative import
-import stlinkex #Use relative import
+from . import stm32devices #Use relative import
+from . import stlinkex #Use relative import
 
 
 class Stm32():

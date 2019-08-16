@@ -1,6 +1,6 @@
 import time
-import stm32 #Use relative import
-import stlinkex #Use relative import
+from . import stm32 #Use relative import
+from . import stlinkex #Use relative import
 
 
 class Flash():

@@ -1,4 +1,4 @@
-import stlinkex #Use relative import
+from . import stlinkex #Use relative import
 import struct
 import array
 import binascii
