@@ -31,7 +31,7 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 - pip installer
 - proxy to GDB
 - and maybe GUI
-- support for ST-Link/V1 is NOT planed, use ST-Link/V2 or V2-1 instead
+- support for ST-Link/V1 is NOT planned, use ST-Link/V2 or V2-1 instead
 
 ## Install
 
@@ -47,6 +47,14 @@ Goal of this project is to bring more flexible support for different MCUs, very 
 - [Download](https://github.com/pavelrevak/pystlink/archive/master.zip) and unpack or `git clone https://github.com/pavelrevak/pystlink.git`
 - Connect ST-LINK
 - Run `./pystlink.py --help` (or `python3 pystlink.py ...` - depend on python installation and architecture)
+
+## Library usage
+Example using as lib:
+```
+with pystlink.PyStlink() as stlink:
+    d = stlink.start("dump:0x20007F80:4 -q -a2")
+    print(d)
+```
 
 ## Help
 ```
@@ -65,6 +73,7 @@ optional arguments:
   -u, --no-unmount   do not unmount DISCOVERY from ST-Link/V2-1 on OS/X platform
 
 set verbosity level:
+  -lq --libraryquiet
   -q, --quiet
   -i, --info         default
   -v, --verbose

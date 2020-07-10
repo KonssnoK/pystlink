@@ -444,11 +444,13 @@ class PyStlink():
             self._driver.set_mem(addr, data)
 
     def cmd_flash(self, params):
+        #Check for erase
         erase = False
         verify = False
         write = True
         if params[0] == 'erase':
             params = params[1:]
+            #Check for mass erase
             if not params:
                 self._flash_size = self._stlink.get_debugreg16(self._mcus_by_devid['flash_size_reg'])
                 self._driver.flash_erase_all(self._flash_size)
@@ -458,8 +460,10 @@ class PyStlink():
             write = False
             verify = True
             params = params[1:]
+        #Read the file
         mem = self.read_file(params[-1])
         params = params[:-1]
+        #Check for verify
         if params and params[0] == 'verify':
             verify = True
             params = params[1:]

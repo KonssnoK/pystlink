@@ -105,7 +105,7 @@ class Flash():
 
     def erase_sectors(self, flash_start, erase_sizes, addr, size):
         erase_addr = flash_start
-        self._dbg.bargraph_start('Erasing FLASH', value_min=flash_start, value_max=flash_start + size)
+        self._dbg.bargraph_start('Erasing FLASH [0x%08X-0x%08X]'%(flash_start, flash_start + size), value_min=flash_start, value_max=flash_start + size)
         sector = 0
         while True:
             for erase_size in erase_sizes:
@@ -177,7 +177,7 @@ class Stm32FS(stm32.Stm32):
         params =   Flash.get_voltage_dependend_params(self)
         print('Align %d' % params['align'])
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_PG_BIT | params['FLASH_CR_PSIZE'])
-        self._dbg.bargraph_start('Writing FLASH', value_min=addr, value_max=addr + len(data))
+        self._dbg.bargraph_start('Writing FLASH [0x%08X-0x%08X]'%(addr, addr + len(data)), value_min=addr, value_max=addr + len(data))
         # align data
         if len(data) % params['align']:
             data.extend([0xff] * (params['align'] - len(data) % params['align']))

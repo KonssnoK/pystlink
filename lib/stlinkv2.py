@@ -106,7 +106,7 @@ class Stlink():
             self._connector.xfer([Stlink.STLINK_GET_CURRENT_MODE], rx_len=2)
 
     def read_version(self):
-        # WORKAROUNF for OS/X 10.11+
+        # WORKAROUND for OS/X 10.11+
         # ... retry XFER if first is timeout.
         # only during this command it is necessary
         rx = self._connector.xfer([Stlink.STLINK_GET_VERSION, 0x80], rx_len=6, retry=2, tout=200)
