@@ -1,6 +1,8 @@
 import sys
 import time
 
+class Verbosity():
+    lq,q,i,v,d = range(5)
 
 class Dbg():
     def __init__(self, verbose, bar_length=40):
@@ -21,22 +23,22 @@ class Dbg():
             sys.stderr.write('%s\n' % msg)
             sys.stderr.flush()
 
-    def debug(self, msg, level=3):
+    def debug(self, msg, level=Verbosity.d):
         self._msg(msg, level)
 
-    def verbose(self, msg, level=2):
+    def verbose(self, msg, level=Verbosity.v):
         self._msg(msg, level)
 
-    def info(self, msg, level=1):
+    def info(self, msg, level=Verbosity.i):
         self._msg(msg, level)
 
-    def message(self, msg, level=0):
+    def message(self, msg, level=Verbosity.q):
         self._msg(msg, level)
 
-    def error(self, msg, level=0):
+    def error(self, msg, level=Verbosity.lq):
         self._msg('*** %s ***' % msg, level)
 
-    def warning(self, msg, level=0):
+    def warning(self, msg, level=Verbosity.lq):
         self._msg(' * %s' % msg, level)
 
     def print_bargraph(self, percent):
@@ -89,3 +91,6 @@ class Dbg():
 
     def set_verbose(self, verbose):
         self._verbose = verbose
+
+    def is_library_quiet(self):
+        return self._verbose == Verbosity.lq

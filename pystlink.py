@@ -217,6 +217,10 @@ class PyStlink():
         self.load_driver()
 
     def print_buffer(self, addr, data, bytes_per_line=16):
+        #When used as a library the buffer is returned directly to the caller, no need to dump it
+        if self._dbg.is_library_quiet():
+            return
+
         prev_chunk = []
         same_chunk = False
         for i in range(0, len(data), bytes_per_line):
@@ -440,10 +444,11 @@ class PyStlink():
         parser = argparse.ArgumentParser(prog='pystlink', formatter_class=argparse.RawTextHelpFormatter, description=DESCRIPTION_STR, epilog=ACTIONS_HELP_STR)
         group_verbose = parser.add_argument_group(title='set verbosity level').add_mutually_exclusive_group()
         group_verbose.set_defaults(verbosity=1)
-        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=0)
-        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=1, help='default')
-        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=2)
-        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=3)
+        group_verbose.add_argument('-lq', '--libraryquiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.lq)
+        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.q)
+        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.i, help='default')
+        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.v)
+        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.d)
         parser.add_argument('-V', '--version', action='version', version=VERSION_STR)
         parser.add_argument('-c', '--cpu', action='append', help='set expected CPU type [eg: STM32F051, STM32L4]')
         parser.add_argument('-r', '--no-run', action='store_true', help='do not run core when program end (if core was halted)')
