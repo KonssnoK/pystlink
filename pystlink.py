@@ -419,6 +419,57 @@ class PyStlink():
                 self._driver.core_halt()
                 self._driver.flash_verify(addr, data)
         self._driver.core_run()
+
+    def cmd_optbyte(self, params):
+        # optbyte:write:all:reset
+        # optbyte:read:2:set
+        if len(params) != 3:
+            raise stlib.stlinkex.StlinkExceptionBadParam('Usage: optbyte:operation:sector:enable. Example: optbyte:write:2:set')
+
+        isRead = 0
+        #Read parameters
+        if params[0] == 'erase':
+            #Erase the whole OPT area
+            self._driver.optbyte_erase()
+            return
+        elif params[0] == 'read':
+            isRead = 1
+        elif params[0] != 'write':
+            raise stlib.stlinkex.StlinkExceptionBadParam('Only <write> <read> <erase> options allowed')
+
+        params = params[1:]
+        sector = params[0]
+        params = params[1:]
+        if sector >= 32 or sector < 0:
+            raise stlib.stlinkex.StlinkExceptionBadParam('Sector not in range [0-31]')
+        enable = params[0]
+        params = params[1:]
+        if not (enable == 'set' or enable == 'reset'):
+            raise stlib.stlinkex.StlinkExceptionBadParam('Wrong enable flag. [set][reset]')
+        
+        if enable == 'set':
+            enable = 1
+        else:
+            enable = 0
+
+        #TODO: Support multiple sectors
+        sectors = []
+        sectors[0] = sector
+
+        if isRead:
+            #Read protection operation
+            raise stlib.stlinkex.StlinkExceptionBadParam('Not supported yet')
+        else:
+            #Flash already unlocked at driver creation
+            #Unlock option byte write protection
+            self._driver.unlock_optbytes()
+            #Write protection operation
+            self._driver.optbyte_write(sectors, enable)
+            #Lock back
+            self._driver.lock_optbytes()
+
+        return
+
     def cmd(self, param):
         cmd = param[0]
         params = param[1:]
@@ -444,6 +495,8 @@ class PyStlink():
             self.cmd_fill(params)
         elif cmd == 'flash' and params:
             self.cmd_flash(params)
+        elif cmd == 'optbyte' and params:
+            self.cmd_optbyte(params)
         elif cmd == 'reset':
             if params:
                 if params[0] == 'halt':

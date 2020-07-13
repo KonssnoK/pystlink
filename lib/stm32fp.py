@@ -7,10 +7,12 @@ class Flash():
     FLASH_REG_BASE = 0x40022000
     FLASH_REG_BASE_STEP = 0x40
     FLASH_KEYR_INDEX = 0x04
+    FLASH_OPTKEYR_INDEX = 0x08
     FLASH_SR_INDEX = 0x0c
     FLASH_CR_INDEX = 0x10
     FLASH_AR_INDEX = 0x14
     FLASH_KEYR_REG = FLASH_REG_BASE + FLASH_KEYR_INDEX
+    FLASH_OPTKEYR_REG = FLASH_REG_BASE + FLASH_OPTKEYR_INDEX
     FLASH_SR_REG = FLASH_REG_BASE + FLASH_SR_INDEX
     FLASH_CR_REG = FLASH_REG_BASE + FLASH_CR_INDEX
     FLASH_AR_REG = FLASH_REG_BASE + FLASH_AR_INDEX
@@ -20,7 +22,9 @@ class Flash():
     FLASH_CR_PER_BIT = 0x00000002
     FLASH_CR_MER_BIT = 0x00000004
     FLASH_CR_STRT_BIT = 0x00000040
+    FLASH_CR_OPTWRE_BIT = 0x00000200
     FLASH_SR_BUSY_BIT = 0x00000001
+    FLASH_SR_ERLYBSY_BIT = 0x00000002
     FLASH_SR_PGERR_BIT = 0x00000004
     FLASH_SR_WRPRTERR_BIT = 0x00000010
     FLASH_SR_EOP_BIT = 0x00000020
@@ -59,6 +63,26 @@ class Flash():
     def lock(self):
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_LOCK_BIT)
         self._driver.core_reset_halt()
+
+    def unlock_optbytes(self):
+        self._driver.core_reset_halt()
+
+        #Unlock option bytes
+        if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_OPTWRE_BIT:
+            #unlock using keys
+            self._stlink.set_debugreg32(Flash.FLASH_OPTKEYR_REG, 0x45670123)
+            self._stlink.set_debugreg32(Flash.FLASH_OPTKEYR_REG, 0xcdef89ab)
+        else:
+            print("UNLOCK: OPTION BYTES already unlocked!? FLASH_CR:%s"%hex(self._stlink.get_debugreg32(Flash.FLASH_CR_REG)))
+
+        if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_OPTWRE_BIT:
+            raise stlinkex.StlinkException('Error unlocking OPTION BYTES')
+        return
+
+    def lock_optbytes(self):
+        self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_OPTWRE_BIT)
+        self._driver.core_reset_halt()
+        return
 
     def erase_all(self):
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_MER_BIT)
@@ -117,6 +141,13 @@ class Flash():
 # support all STM32F MCUs with page access to FLASH
 # (STM32F0xx, STM32F1xx and also STM32F3xx)
 class Stm32FP(stm32.Stm32):
+    OPTIONBYTE_REG_BASE = 0x1FFFF800
+    OPTIONBYTE_WRP01_INDEX = 0x00000008
+    OPTIONBYTE_WRP23_INDEX = 0x0000000C
+
+    OPTIONBYTE_WRP01_REG = OPTIONBYTE_REG_BASE + OPTIONBYTE_WRP01_INDEX
+    OPTIONBYTE_WRP23_REG = OPTIONBYTE_REG_BASE + OPTIONBYTE_WRP23_INDEX
+
     def _flash_erase_all(self, bank=0):
         flash = Flash(self, self._stlink, self._dbg, bank=bank)
         flash.erase_all()
@@ -156,6 +187,94 @@ class Stm32FP(stm32.Stm32):
         elif addr % 2:
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_write(addr, data, erase=erase, erase_sizes=erase_sizes)
+
+
+    def optbyte_erase(self):
+        """ Erase the whole OPT area
+        """
+        #TODO
+        # (1) Set the OPTER bit in the FLASH_CR register to enable option byte        erasing */
+        # (2) Set the STRT bit in the FLASH_CR register to start the erasing */
+        # (3) Wait until the BSY bit is reset in the FLASH_SR register */
+        # (4) Check the EOP flag in the FLASH_SR register */
+        # (5) Clear EOP flag by software by writing EOP at 1 */
+        # (6) Reset the PER Bit to disable the page erase */ 
+        return
+
+    def optbyte_write(self, sectors, enable):
+        """ Disable or enable option bytes for the given sectors (Write protection)
+            WRP bits from 0 to 31 are protecting the Flash memory by sector of 4 kB.
+            For STM32F030xC bit 31 is protecting the last 132 kB.
+        """
+        self._dbg.debug('Stm32FP.optbyte_write()') #TODO Finish
+
+        WRP = []
+        #Get current settings
+        WRP[0] = self._stlink.get_debugreg32(Stm32FP.OPTIONBYTE_WRP01_REG)
+        WRP[1] = self._stlink.get_debugreg32(Stm32FP.OPTIONBYTE_WRP23_REG)
+
+        #Compute values to set
+        for s in sectors:
+            if enable:
+                #Clear the bit to write-protect and set the complementary
+                if s < 8:
+                    WRP[0] &= ~(1 << s)
+                    WRP[0] |= (1 << s) << 8
+                if s < 16:
+                    WRP[0] &= ~((1 << s) << 16)
+                    WRP[0] |= (1 << s) << 24
+                elif s < 24:
+                    WRP[1] &= ~(1 << s)
+                    WRP[1] |= (1 << s) << 8
+                else:
+                    WRP[1] &= ~((1 << s) << 16)
+                    WRP[1] |= (1 << s) << 24
+            else:
+                #Set the bit to disable protection and clear the complementary
+                if s < 8:
+                    WRP[0] |= (1 << s)
+                    WRP[0] &= ~((1 << s) << 8)
+                if s < 16:
+                    WRP[0] |= (1 << s) << 16
+                    WRP[0] &= ~((1 << s) << 24)
+                elif s < 24:
+                    WRP[1] |= (1 << s)
+                    WRP[1] &= ~((1 << s) << 8)
+                else:
+                    WRP[1] |= (1 << s) << 16
+                    WRP[1] &= ~((1 << s) << 24)
+
+        #TODO
+        #Since we don't know how write protection works in other MCUs we put the implementation here
+        #Hopefully it can be moved in the general Flash class
+
+        #Set PG bit in FLASH_CR
+        self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_PG_BIT)
+        #Set desired value in the OPT registers
+        self._stlink.set_debugreg32(Stm32FP.OPTIONBYTE_WRP01_REG, WRP[0])
+        self._stlink.set_debugreg32(Stm32FP.OPTIONBYTE_WRP23_REG, WRP[1])
+        #Wait for BSY flag in FLASH_SR
+        while True:
+            status = self._stlink.get_debugreg32(Flash.FLASH_SR_REG)
+            if not status & Flash.FLASH_SR_BUSY_BIT:
+                break
+            time.sleep(0.001)
+        #Check EOP flag in FLASH_SR
+        #This is end_of_operation from Flash class -> Use that instead of code
+        if status != Flash.FLASH_SR_EOP_BIT:
+            if status & Flash.FLASH_SR_WRPRTERR_BIT:
+                self._dbg.info("WRPRTERR: Writing page without UNLOCK?")
+            if status & Flash.FLASH_SR_PGERR_BIT:
+                self._dbg.info("PGERR: Writing page without ERASE?")
+            if status & Flash.FLASH_SR_ERLYBSY_BIT:
+                self._dbg.info("ERLYBSY set -> ?")
+            raise stlinkex.StlinkException('Error writing FLASH with status (FLASH_SR) %08x' % status)
+        #Clear EOP flag in FLASH_CR
+        self._stlink.set_debugreg32(Flash.FLASH_SR_REG, status)
+        #Reset PG bit in FLASH_CR
+        flash_cr = self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & ~Flash.FLASH_CR_PG_BIT
+        self._stlink.set_debugreg32(Flash.FLASH_CR_REG, flash_cr)
+        
 
 
 # support STM32F MCUs with page access to FLASH and two banks
