@@ -34,6 +34,7 @@ list of available actions:
 
   set:{reg}:{data}     set register (halt core)
   set:{addr}:{data}    set 32 bit memory register
+  set:flash:{addr}:{data}    set 32 bit flash memory (works only on erased memory or writing 0)
 
   read:{addr}:{size}:{file}      read memory with size into file
   read:sram[:{size}]:{file}      read SRAM into file
@@ -336,12 +337,22 @@ class PyStlink():
         self.store_file(addr, data, file_name)
 
     def cmd_set(self, params):
+        # Check for flash address
+        flash = False
+        if params and params[0] == 'flash':
+            flash = True
+            params = params[1:]
+        #Get the address/registry name
         cmd = params[0]
         params = params[1:]
         if not params:
             raise lib.stlinkex.StlinkExceptionBadParam('Missing argument')
         data = int(params[0], 0)
-        if self._driver.is_reg(cmd):
+
+        if flash:
+            addr = int(cmd, 0)
+            self._driver.flash_write(addr, stlib.stlinkv2.Stlink.to_bytes('little', data))
+        elif self._driver.is_reg(cmd):
             self._driver.core_halt()
             reg = cmd.upper()
             self._driver.set_reg(reg, data)
@@ -408,15 +419,25 @@ class PyStlink():
                 params = params[1:]
         if params:
             raise lib.stlinkex.StlinkExceptionBadParam('Address for write is set by file')
-        for addr, data in mem:
-            if addr is None:
-                addr = start_addr
-            if write:
-                self._driver.flash_write(addr, data, erase=erase, erase_sizes=self._mcus_by_devid['erase_sizes'])
+        #We first do all erases and then all writes, or we could erase something we already wrote!
+        if erase:
+            for addr, data in mem:
+                if addr is None:
+                    addr = start_addr
+                self._driver.flash_erase(addr, len(data), erase_sizes=self._mcus_by_devid['erase_sizes'])
+        if write:
+            #Now we can write anything we want
+            for addr, data in mem:
+                if addr is None:
+                    addr = start_addr
+                self._driver.flash_write(addr, data)
                 self._driver.core_reset_halt()
                 time.sleep(0.1)
-            if verify:
-                self._driver.core_halt()
+        if verify:
+            self._driver.core_halt()
+            for addr, data in mem:
+                if addr is None:
+                    addr = start_addr
                 self._driver.flash_verify(addr, data)
         self._driver.core_run()
 

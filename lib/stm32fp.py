@@ -56,6 +56,8 @@ class Flash():
             # unlock keys
             self._stlink.set_debugreg32(Flash.FLASH_KEYR_REG, 0x45670123)
             self._stlink.set_debugreg32(Flash.FLASH_KEYR_REG, 0xcdef89ab)
+        else:
+            print("UNLOCK: FLASH already unlocked!? FLASH_CR:%s"%hex(self._stlink.get_debugreg32(Flash.FLASH_CR_REG)))
         # programing locked
         if self._stlink.get_debugreg32(Flash.FLASH_CR_REG) & Flash.FLASH_CR_LOCK_BIT:
             raise stlinkex.StlinkException('Error unlocking FLASH')
@@ -97,7 +99,18 @@ class Flash():
 
     def erase_pages(self, flash_start, erase_sizes, addr, size):
         page_addr = flash_start
-        self._dbg.bargraph_start('Erasing FLASH', value_min=addr, value_max=addr + size)
+        #Compute real page start and end address
+        erase_mask = -1
+        addr_end = addr + size
+        if len(erase_sizes) == 1:
+            # Current support just for single sized page flash memories
+            erase_mask = ~(erase_sizes[0] - 1)
+            addr_end = ((addr + size) & erase_mask)
+            if (addr + size) > addr_end:
+                addr_end += erase_sizes[0]
+
+        self._dbg.bargraph_start('Erasing FLASH [0x%08X-0x%08X]'%(addr & erase_mask, addr_end), value_min=addr, value_max=addr + size)
+        #Do erase
         while True:
             for page_size in erase_sizes:
                 if addr < page_addr + page_size:
@@ -135,6 +148,12 @@ class Flash():
     def end_of_operation(self, status):
         if status != Flash.FLASH_SR_EOP_BIT:
             if status & Flash.FLASH_SR_WRPRTERR_BIT:
+                self._dbg.info("WRPRTERR: Writing page without UNLOCK?")
+            if status & Flash.FLASH_SR_PGERR_BIT:
+                self._dbg.info("PGERR: Writing page without ERASE?")
+            if status & Flash.FLASH_SR_ERLYBSY_BIT:
+                self._dbg.info("ERLYBSY set -> ?")
+            raise stlinkex.StlinkException('Error writing FLASH with status (FLASH_SR) %08x' % status)
         self._stlink.set_debugreg32(Flash.FLASH_SR_REG, status)
 
 
@@ -167,7 +186,7 @@ class Stm32FP(stm32.Stm32):
                 flash.erase_pages(self.FLASH_START, erase_sizes, addr, len(data))
             else:
                 flash.erase_all()
-        self._dbg.bargraph_start('Writing FLASH', value_min=addr, value_max=addr + len(data))
+        self._dbg.bargraph_start('Writing FLASH [0x%08X-0x%08X]'%(addr, addr + len(data)), value_min=addr, value_max=addr + len(data))
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_PG_BIT)
         while(data):
             self._dbg.bargraph_update(value=addr)
@@ -180,6 +199,18 @@ class Stm32FP(stm32.Stm32):
         flash.lock()
         self._dbg.bargraph_done()
 
+    def _flash_erase(self, addr, datalen, erase_sizes=None, bank=0):
+        """ Init Flash, call flash erase operation, lock flash
+        """
+        flash = Flash(self, self._stlink, self._dbg, bank=bank)
+        if erase_sizes:
+            flash.erase_pages(self.FLASH_START, erase_sizes, addr, datalen)
+        else:
+            flash.erase_all()
+        #flash is unlocked upon initialization
+        flash.lock()
+
+
     def flash_write(self, addr, data, erase=False, erase_sizes=None):
         self._dbg.debug('Stm32FP.flash_write(%s, [data:%dBytes], erase=%s, erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', len(data), erase, erase_sizes))
         if addr is None:
@@ -188,6 +219,15 @@ class Stm32FP(stm32.Stm32):
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_write(addr, data, erase=erase, erase_sizes=erase_sizes)
 
+    def flash_erase(self, addr, datalen, erase_sizes=None):
+        """ Erase pages from starting address for a given len (rounded up to page size)
+        """
+        self._dbg.debug('Stm32FP.flash_erase(%s, [data:%dBytes], erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', datalen, erase_sizes))
+        if addr is None:
+            addr = self.FLASH_START
+        elif addr % 2:
+            raise stlinkex.StlinkException('Start address is not aligned to half-word')
+        self._flash_erase(addr, datalen, erase_sizes=erase_sizes)
 
     def optbyte_erase(self):
         """ Erase the whole OPT area

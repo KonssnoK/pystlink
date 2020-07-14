@@ -201,3 +201,8 @@ class Stm32FS(stm32.Stm32):
         if status & Flash.FLASH_SR_ERROR_MASK:
             raise lib.stlinkex.StlinkException(
                 'Error writing FLASH with status: %08x\n' % status)
+
+    def flash_erase(self, addr, datalen, erase_sizes=None):
+        """ TODO Missing flash_erase operation
+        """
+        raise stlinkex.StlinkException('Not implemented. Sorry :(')
