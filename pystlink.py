@@ -401,7 +401,7 @@ class PyStlink():
 
         if flash:
             addr = int(cmd, 0)
-            self._driver.flash_write(addr, lib.stlinkv2.Stlink.to_bytes('little', data))
+            self._driver.flash_write(addr, data.to_bytes(4, byteorder='little'))
         elif self._driver.is_reg(cmd):
             self._driver.core_halt()
             reg = cmd.upper()
