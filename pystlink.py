@@ -106,14 +106,14 @@ class PyStlink():
             cpuid = self._stlink.get_debugreg32(PyStlink.CPUID_REG)
             if cpuid == 0:
                 if i == 100:
-                    raise stlib.stlinkex.StlinkException('Not connected to CPU')
+                    raise lib.stlinkex.StlinkException('Not connected to CPU')
                 else:
                     time.sleep(0.1)
                     i+=1
                     continue
 
             partno = 0xfff & (cpuid >> 4)
-            for mcu_core in stlib.stm32devices.DEVICES:
+            for mcu_core in lib.stm32devices.DEVICES:
                 if mcu_core['part_no'] == partno:
                     self._dbg.verbose("CPUID:  %08x" % cpuid)
                     self._mcus_by_core = mcu_core
@@ -129,9 +129,8 @@ class PyStlink():
             #But we can't loop forever
             if i == 10000:
                 self._dbg.verbose("CPUID:  %08x" % cpuid)
-                raise stlib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device with PART_NO: %s'%(str(parts)))
-
-                return
+                raise lib.stlinkex.StlinkException('PART_NO: timeout while trying to read from device with PART_NO: %s'%(str(parts)))
+        return
 
 
     def find_mcus_by_devid(self):
@@ -159,8 +158,8 @@ class PyStlink():
             #But we can't loop forever
             if i >= 1000:
                 self._dbg.verbose("IDCODE: %08x" % idcode)
-                raise stlib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
-                    return
+                raise lib.stlinkex.StlinkException('DEV_ID: 0x%03x is not supported' % devid)
+        return
 
     def find_mcus_by_flash_size(self):
         i = 0
@@ -182,7 +181,7 @@ class PyStlink():
 
             #But we can't loop forever
             if i >= 1000:
-                raise stlib.stlinkex.StlinkException('Connected CPU with DEV_ID: 0x%03x and FLASH size: %dKB is not supported. Check Protection' % (
+                raise lib.stlinkex.StlinkException('Connected CPU with DEV_ID: 0x%03x and FLASH size: %dKB is not supported. Check Protection' % (
                     self._mcus_by_devid['dev_id'], self._flash_size
                 ))
 
@@ -402,7 +401,7 @@ class PyStlink():
 
         if flash:
             addr = int(cmd, 0)
-            self._driver.flash_write(addr, stlib.stlinkv2.Stlink.to_bytes('little', data))
+            self._driver.flash_write(addr, lib.stlinkv2.Stlink.to_bytes('little', data))
         elif self._driver.is_reg(cmd):
             self._driver.core_halt()
             reg = cmd.upper()
@@ -500,7 +499,7 @@ class PyStlink():
         # optbyte:write:all:reset
         # optbyte:read:2:set
         if len(params) != 3:
-            raise stlib.stlinkex.StlinkExceptionBadParam('Usage: optbyte:operation:sector:enable. Example: optbyte:write:2:set')
+            raise lib.stlinkex.StlinkExceptionBadParam('Usage: optbyte:operation:sector:enable. Example: optbyte:write:2:set')
 
         isRead = 0
         #Read parameters
@@ -511,17 +510,17 @@ class PyStlink():
         elif params[0] == 'read':
             isRead = 1
         elif params[0] != 'write':
-            raise stlib.stlinkex.StlinkExceptionBadParam('Only <write> <read> <erase> options allowed')
+            raise lib.stlinkex.StlinkExceptionBadParam('Only <write> <read> <erase> options allowed')
 
         params = params[1:]
         sector = params[0]
         params = params[1:]
         if sector >= 32 or sector < 0:
-            raise stlib.stlinkex.StlinkExceptionBadParam('Sector not in range [0-31]')
+            raise lib.stlinkex.StlinkExceptionBadParam('Sector not in range [0-31]')
         enable = params[0]
         params = params[1:]
         if not (enable == 'set' or enable == 'reset'):
-            raise stlib.stlinkex.StlinkExceptionBadParam('Wrong enable flag. [set][reset]')
+            raise lib.stlinkex.StlinkExceptionBadParam('Wrong enable flag. [set][reset]')
         
         if enable == 'set':
             enable = 1
@@ -534,7 +533,7 @@ class PyStlink():
 
         if isRead:
             #Read protection operation
-            raise stlib.stlinkex.StlinkExceptionBadParam('Not supported yet')
+            raise lib.stlinkex.StlinkExceptionBadParam('Not supported yet')
         else:
             #Flash already unlocked at driver creation
             #Unlock option byte write protection
@@ -600,11 +599,11 @@ class PyStlink():
         parser = argparse.ArgumentParser(prog='pystlink', formatter_class=argparse.RawTextHelpFormatter, description=DESCRIPTION_STR, epilog=ACTIONS_HELP_STR)
         group_verbose = parser.add_argument_group(title='set verbosity level').add_mutually_exclusive_group()
         group_verbose.set_defaults(verbosity=1)
-        group_verbose.add_argument('-lq', '--libraryquiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.lq)
-        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.q)
-        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.i, help='default')
-        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.v)
-        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=stlib.dbg.Verbosity.d)
+        group_verbose.add_argument('-lq', '--libraryquiet', action='store_const', dest='verbosity', const=lib.dbg.Verbosity.lq)
+        group_verbose.add_argument('-q', '--quiet', action='store_const', dest='verbosity', const=lib.dbg.Verbosity.q)
+        group_verbose.add_argument('-i', '--info', action='store_const', dest='verbosity', const=lib.dbg.Verbosity.i, help='default')
+        group_verbose.add_argument('-v', '--verbose', action='store_const', dest='verbosity', const=lib.dbg.Verbosity.v)
+        group_verbose.add_argument('-d', '--debug', action='store_const', dest='verbosity', const=lib.dbg.Verbosity.d)
         parser.add_argument('-V', '--version', action='version', version=VERSION_STR)
         parser.add_argument('-c', '--cpu', action='append', help='set expected CPU type [eg: STM32F051, STM32L4]')
         parser.add_argument('-r', '--no-run', action='store_true', help='do not run core when program end (if core was halted)')
