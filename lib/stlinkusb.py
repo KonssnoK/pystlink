@@ -168,3 +168,9 @@ class StlinkUsbConnector():
                 stderr=subprocess.PIPE,
             )
             p.wait()
+
+    def dispose(self):
+        """ Dispose the device and detach from libusb
+        """
+        if self._dev:
+            self._dev._finalize_object()
