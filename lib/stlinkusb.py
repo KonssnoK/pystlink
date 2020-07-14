@@ -1,6 +1,6 @@
 import usb.core
 import usb.util
-import lib.stlinkex
+from . import stlinkex #Use relative import
 import re
 
 
@@ -92,7 +92,7 @@ class StlinkUsbConnector():
             self._dbg.verbose("Connected to ST-Link/%4s, serial %s" % (
                  self._dev_type['version'],  self._get_serial()))
             return
-        raise lib.stlinkex.StlinkException('ST-Link/V2 is not connected')
+        raise stlinkex.StlinkException('ST-Link/V2 is not connected')
 
     @property
     def version(self):
@@ -107,7 +107,7 @@ class StlinkUsbConnector():
         self._xfer_counter += 1
         count = self._dev.write(self._dev_type['outPipe'], data, tout)
         if count != len(data):
-            raise lib.stlinkex.StlinkException("Error, only %d Bytes was transmitted to ST-Link instead of expected %d" % (count, len(data)))
+            raise stlinkex.StlinkException("Error, only %d Bytes was transmitted to ST-Link instead of expected %d" % (count, len(data)))
 
     def _read(self, size, tout=200):
         read_size = size
@@ -124,7 +124,7 @@ class StlinkUsbConnector():
         while (True):
             try:
                 if len(cmd) > self.STLINK_CMD_SIZE_V2:
-                    raise lib.stlinkex.StlinkException("Error too many Bytes in command: %d, maximum is %d" % (len(cmd), self.STLINK_CMD_SIZE_V2))
+                    raise stlinkex.StlinkException("Error too many Bytes in command: %d, maximum is %d" % (len(cmd), self.STLINK_CMD_SIZE_V2))
                 # pad to 16 bytes
                 cmd += [0] * (self.STLINK_CMD_SIZE_V2 - len(cmd))
                 self._write(cmd, tout)
