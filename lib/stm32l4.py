@@ -171,6 +171,8 @@ class Flash():
 
 # support all STM32L4 and G0 MCUs with page size access to FLASH
 class Stm32L4(lib.stm32.Stm32):
+    ADDRESSING_SIZE = 8
+
     def flash_erase_all(self, flash_size):
         self._dbg.debug('Stm32L4.flash_erase_all()')
         flash = Flash(self, self._stlink, self._dbg)
@@ -183,11 +185,11 @@ class Stm32L4(lib.stm32.Stm32):
         self._dbg.debug(
             'Stm32l4.flash_write(%s, [data:%dBytes], erase=%s, erase_sizes=%s)'
             % (addr, len(data), erase, erase_sizes))
-        if addr % 8:
+        if addr % self.ADDRESSING_SIZE:
             raise lib.stlinkex.StlinkException('Start address is not aligned to word')
         # pad data
-        if len(data) % 8:
-            data.extend([0xff] * (8 - len(data) % 8))
+        if len(data) % self.ADDRESSING_SIZE:
+            data.extend([0xff] * (self.ADDRESSING_SIZE - len(data) % self.ADDRESSING_SIZE))
         flash = Flash(self, self._stlink, self._dbg)
         flash.unlock()
         if erase:

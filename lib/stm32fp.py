@@ -160,6 +160,7 @@ class Flash():
 # support all STM32F MCUs with page access to FLASH
 # (STM32F0xx, STM32F1xx and also STM32F3xx)
 class Stm32FP(stm32.Stm32):
+    ADDRESSING_SIZE = 2
     OPTIONBYTE_REG_BASE = 0x1FFFF800
     OPTIONBYTE_WRP01_INDEX = 0x00000008
     OPTIONBYTE_WRP23_INDEX = 0x0000000C
@@ -178,8 +179,8 @@ class Stm32FP(stm32.Stm32):
 
     def _flash_write(self, addr, data, erase=False, erase_sizes=None, bank=0):
         # align data
-        if len(data) % 2:
-            data.extend([0xff] * (2 - len(data) % 2))
+        if len(data) % self.ADDRESSING_SIZE:
+            data.extend([0xff] * (self.ADDRESSING_SIZE - len(data) % self.ADDRESSING_SIZE))
         flash = Flash(self, self._stlink, self._dbg, bank=bank)
         if erase:
             if erase_sizes:
@@ -215,7 +216,7 @@ class Stm32FP(stm32.Stm32):
         self._dbg.debug('Stm32FP.flash_write(%s, [data:%dBytes], erase=%s, erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', len(data), erase, erase_sizes))
         if addr is None:
             addr = self.FLASH_START
-        elif addr % 2:
+        elif addr % self.ADDRESSING_SIZE:
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_write(addr, data, erase=erase, erase_sizes=erase_sizes)
 
@@ -225,7 +226,7 @@ class Stm32FP(stm32.Stm32):
         self._dbg.debug('Stm32FP.flash_erase(%s, [data:%dBytes], erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', datalen, erase_sizes))
         if addr is None:
             addr = self.FLASH_START
-        elif addr % 2:
+        elif addr % self.ADDRESSING_SIZE:
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         self._flash_erase(addr, datalen, erase_sizes=erase_sizes)
 
@@ -321,6 +322,7 @@ class Stm32FP(stm32.Stm32):
 # (STM32F1xxxF and STM32F1xxxG) (XL devices)
 class Stm32FPXL(Stm32FP):
     BANK_SIZE = 512 * 1024
+    ADDRESSING_SIZE = 2
 
     def flash_erase_all(self, flash_size):
         self._dbg.debug('Stm32F1.flash_erase_all()')
@@ -331,7 +333,7 @@ class Stm32FPXL(Stm32FP):
         self._dbg.debug('Stm32F1.flash_write(%s, [data:%dBytes], erase=%s, erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', len(data), erase, erase_sizes))
         if addr is None:
             addr = self.FLASH_START
-        elif addr % 2:
+        elif addr % self.ADDRESSING_SIZE:
             raise stlinkex.StlinkException('Start address is not aligned to half-word')
         if (addr - self.FLASH_START) + len(data) <= Stm32FPXL.BANK_SIZE:
             self._flash_write(addr, data, erase=erase, erase_sizes=erase_sizes, bank=0)
