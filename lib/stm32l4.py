@@ -125,9 +125,13 @@ class Flash():
                           (addr, size))
         page =      (addr - lib.stm32.Stm32.FLASH_START       ) // self._page_size
         last_page = (addr - lib.stm32.Stm32.FLASH_START + size + self._page_size - 1) // self._page_size
+        
+        
         self._dbg.verbose('erase_pages %d to %d' % (page, last_page))
-        self._dbg.bargraph_start('Erasing FLASH', value_min=page,
-                                 value_max=last_page)
+        self._dbg.bargraph_start('Erasing FLASH [0x%08X-0x%08X]'%(
+                lib.stm32.Stm32.FLASH_START + (page*self._page_size), 
+                lib.stm32.Stm32.FLASH_START + ((last_page+1)*self._page_size)), 
+                value_min=page, value_max=last_page)
         if page == 0 and last_page >= 256:
             self.erase_bank(0);
             page = 256
@@ -198,7 +202,7 @@ class Stm32L4(lib.stm32.Stm32):
             else:
                 flash.erase_all()
             flash.unlock()
-        self._dbg.bargraph_start('Writing FLASH', value_min=addr, value_max=addr + len(data))
+        self._dbg.bargraph_start('Writing FLASH [0x%08X-0x%08X]'%(addr, addr + len(data)), value_min=addr, value_max=addr + len(data))
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, 0)
         self._stlink.set_debugreg32(Flash.FLASH_CR_REG, Flash.FLASH_CR_PG_BIT)
         cr =  self._stlink.get_debugreg32(Flash.FLASH_CR_REG)
@@ -215,3 +219,20 @@ class Stm32L4(lib.stm32.Stm32):
         flash.wait_busy(0.001)
         self._dbg.bargraph_done()
         flash.lock()
+
+    def flash_erase(self, addr, datalen, erase_sizes=None):
+        """ Erase pages from starting address for a given len (rounded up to page size)
+        """
+        self._dbg.debug('Stm32l4.flash_erase(%s, [data:%dBytes], erase_sizes=%s)' % (('0x%08x' % addr) if addr is not None else 'None', datalen, erase_sizes))
+        if addr is None:
+            addr = self.FLASH_START
+        elif addr % self.ADDRESSING_SIZE:
+            raise lib.stlinkex.StlinkException('Start address is not aligned to word')
+        flash = Flash(self, self._stlink, self._dbg)
+        if erase_sizes:
+            flash.erase_pages(addr, datalen)
+        else:
+            flash.erase_all()
+        #flash is unlocked upon initialization
+        flash.lock()
+        
